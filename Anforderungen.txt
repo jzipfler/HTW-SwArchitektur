@@ -1,0 +1,10 @@
+=== Anforderungen ===
+
+* Dienst als "Orchestrierung" realisieren
+* In Ausarbeitung / Präsentation kurz auf Unterschiede "Choreografie - Orchestrierung" eingehen.
+  --> + Einführung in Service Komposition
+* Programmiersprache: GO
+* Betriebssystem: Windows / Linux
+* Minimalsetup: 2 Dienste die hintereinander als neuer Dienst (als 3.er) ausgeführt werden.
+* Dead-Line für Programm: Freitag, 7. Mrz 2014
+* Präsentation des Dienstes / Ergebnisse: ca 20 min.
