@@ -1,5 +1,6 @@
 === Anforderungen ===
 
+* Registry mit Service-Contract (Servicename, alle Parameter, rückgabewert)
 * Dienst als "Orchestrierung" realisieren
 * In Ausarbeitung / Präsentation kurz auf Unterschiede "Choreografie - Orchestrierung" eingehen.
   --> + Einführung in Service Komposition
