@@ -8,3 +8,14 @@
 * Minimalsetup: 2 Dienste die hintereinander als neuer Dienst (als 3.er) ausgeführt werden.
 * Dead-Line für Programm: Freitag, 7. Mrz 2014
 * Präsentation des Dienstes / Ergebnisse: ca 20 min.
+
+=== Dienstbeispiel ===
+
+* Dienst 1:
+  --> Erzeugt Zufallszahl
+* Dienst 2:
+  --> Prüft ob eingegebene Zahl, Primzahl ist.
+
+
+* Dienst 3 / Komposition (Dienst 1 -> Dienst 2):
+  --> Erzeugte Zufallszahl wird auf Primzahleigenschaft überprüft.
