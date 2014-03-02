@@ -17,3 +17,11 @@ serviceuser:
 registryserver:
 	export GOPATH=${CURDIR}; \
 	go install github.com/jzipfler/HTW-SwArchitektur/registryserver
+
+signalHandler:
+	export GOPATH=${CURDIR}; \
+	go build github.com/jzipfler/HTW-SwArchitektur/signalHandler
+
+menu:
+	export GOPATH=${CURDIR}; \
+	go install github.com/jzipfler/HTW-SwArchitektur/menu
