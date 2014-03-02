@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"time"
+	"strconv"
 )
 
 // Information about service argument/parameter
@@ -20,6 +21,12 @@ type ServiceInfo struct {
 	ResultType  string
 	Description string
 	Arguments   []ArgumentInfo
+}
+
+// Information about service and address
+type ServiceInfoAddress struct {
+	Address string
+	Info    ServiceInfo
 }
 
 // Call parameter for a service
@@ -61,10 +68,8 @@ var (
 	TCP_PROTOCOL = "tcp"
 	// Max packt/buffer size for send/receive
 	PACKET_SIZE = 0x10000
-	// Map: name --> service info
-	services = make(map[string]ServiceInfo)
-	// Map: name --> service address
-	servicestoaddr = make(map[string]string)
+	// Map: name --> service info address
+	services = make(map[string]ServiceInfoAddress)
 )
 
 // Returns the address of the currently active registry (if any).
@@ -182,14 +187,20 @@ func RegisterService(serviceinfo *ServiceInfo, handler ServiceHandler) error {
 	if err != nil {
 		return err
 	}
-	address, _ = net.ResolveTCPAddr(TCP_PROTOCOL, connection.LocalAddr().String())
+	defer connection.Close()
 	
-	err = connection.SetLinger(0)
+	listener, err := net.ListenTCP(TCP_PROTOCOL, TCP_ANY_ADDR)
+	if err != nil {
+		return err
+	}
+	defer listener.Close()
+	
+	address, err = net.ResolveTCPAddr(TCP_PROTOCOL, listener.Addr().String())
 	if err != nil {
 		return err
 	}
 	
-	bytes, err := json.Marshal(serviceinfo)
+	bytes, err := json.Marshal(ServiceInfoAddress{strconv.Itoa(address.Port), *serviceinfo})
 	if err != nil {
 		return err
 	}
@@ -198,15 +209,6 @@ func RegisterService(serviceinfo *ServiceInfo, handler ServiceHandler) error {
 	if err != nil {
 		return err
 	}
-
-	connection.Close()
-
-	listener, err := net.ListenTCP(TCP_PROTOCOL, address)
-	if err != nil {
-		return err
-	}
-
-	defer listener.Close()
 
 	for {
 		connection, err := listener.AcceptTCP()
@@ -250,7 +252,7 @@ func registryLookupService(address *net.TCPAddr) error {
 
 // Registers new services and service name lookup.
 func handleRegistryConnection(connection *net.TCPConn) error {
-	serviceinfo := ServiceInfo{}
+	serviceinfoaddress := ServiceInfoAddress{}
 	lookuprequest := LookupRequest{}
 	lookupresponse := LookupResponse{}
 	buffer := make([]byte, PACKET_SIZE)
@@ -265,21 +267,23 @@ func handleRegistryConnection(connection *net.TCPConn) error {
 	if err != nil {
 		return err
 	}
-	err = json.Unmarshal(buffer[:length], &serviceinfo)
+	err = json.Unmarshal(buffer[:length], &serviceinfoaddress)
 	if err != nil {
 		return err
 	}
 
 	if lookuprequest.ServiceName != "" {
-		fmt.Println("lookup service: ", lookuprequest)
-		address, _ := net.ResolveTCPAddr(TCP_PROTOCOL, servicestoaddr[lookuprequest.ServiceName])
+		fmt.Println("service lookup:", lookuprequest)
+		address, _ := net.ResolveTCPAddr(TCP_PROTOCOL, services[lookuprequest.ServiceName].Address)
 		lookupresponse.Address = *address
 		bytes, _ := json.Marshal(lookupresponse)
 		connection.Write(bytes)
-	} else if serviceinfo.Name != "" {
-		fmt.Println("service registered:", connection.RemoteAddr().String(), serviceinfo)
-		services[serviceinfo.Name] = serviceinfo
-		servicestoaddr[serviceinfo.Name] = connection.RemoteAddr().String()
+	} else if serviceinfoaddress.Address != "" {
+		address, _ := net.ResolveTCPAddr(TCP_PROTOCOL, connection.RemoteAddr().String())
+		address.Port, _ = strconv.Atoi(serviceinfoaddress.Address)
+		serviceinfoaddress.Address = address.String()
+		fmt.Println("service registered:", address, serviceinfoaddress)
+		services[serviceinfoaddress.Info.Name] = serviceinfoaddress
 	}
 
 	return nil
