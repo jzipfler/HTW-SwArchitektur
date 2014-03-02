@@ -183,7 +183,12 @@ func RegisterService(serviceinfo *ServiceInfo, handler ServiceHandler) error {
 		return err
 	}
 	address, _ = net.ResolveTCPAddr(TCP_PROTOCOL, connection.LocalAddr().String())
-
+	
+	err = connection.SetLinger(0)
+	if err != nil {
+		return err
+	}
+	
 	bytes, err := json.Marshal(serviceinfo)
 	if err != nil {
 		return err
