@@ -70,17 +70,17 @@ type LookupAddressResponse struct {
 
 var (
 	// Multicast address for resolution of the registry address.
-	MULTICAT_ADDR, _ = net.ResolveUDPAddr("udp4", "224.0.0.1:32001")
+	MULTICAT_ADDR = &net.UDPAddr{IP: net.ParseIP("224.0.0.1"), Port: 32001}
 	// Used to send multicast messages to own address.
-	MULTICAT_SELF_ADDR, _ = net.ResolveUDPAddr("udp4", "127.0.0.1:32001")
+	MULTICAT_SELF_ADDR = &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 32001}
 	// Any UDP address.
-	UDP_ANY_ADDR, _ = net.ResolveUDPAddr("udp4", "0.0.0.0:0")
+	UDP_ANY_ADDR = &net.UDPAddr{IP: net.ParseIP("0.0.0.0"), Port: 0}
 	// Any TCP address.
-	TCP_ANY_ADDR, _ = net.ResolveTCPAddr("tcp4", "0.0.0.0:0")
+	TCP_ANY_ADDR = &net.TCPAddr{IP: net.ParseIP("0.0.0.0"), Port: 0}
 	// UDP protocol to use (any of: "udp", "udp4", "udp6").
-	UDP_PROTOCOL = "udp"
+	UDP_PROTOCOL = "udp4"
 	// TCP protocol to use (any of: "tcp", "tcp4", "tcp6")
-	TCP_PROTOCOL = "tcp"
+	TCP_PROTOCOL = "tcp4"
 	// Maximum packet/buffer size for send/receive calls.
 	PACKET_SIZE = 0x10000
 	// Operation for LookupInfoRequest: get service address.
@@ -101,17 +101,18 @@ func GetRegistryAddress() (*net.TCPAddr, error) {
 	buffer := make([]byte, PACKET_SIZE)
 
 	connection, err := net.ListenUDP(UDP_PROTOCOL, UDP_ANY_ADDR)
+	connection2, err := net.ListenMulticastUDP(UDP_PROTOCOL, nil, MULTICAT_ADDR)
 	if err != nil {
 		return nil, err
 	}
 	defer connection.Close()
+	defer connection2.Close()
 
-	connection.SetReadDeadline(time.Now().Add(time.Second * 4))
 	bytes, err := json.Marshal(request)
 	if err != nil {
 		return nil, err
 	}
-	_, err = connection.WriteToUDP(bytes, MULTICAT_ADDR)
+	_, err = connection2.WriteToUDP(bytes, MULTICAT_ADDR)
 	if err != nil {
 		return nil, err
 	}
@@ -119,15 +120,21 @@ func GetRegistryAddress() (*net.TCPAddr, error) {
 	if err != nil {
 		return nil, err
 	}
+	
+	connection.SetReadDeadline(time.Now().Add(time.Second * 4))
 	length, address, err := connection.ReadFromUDP(buffer)
 	if err != nil {
-		return nil, err
+		connection2.SetReadDeadline(time.Now().Add(time.Second * 4))
+		length, address, err = connection2.ReadFromUDP(buffer)
+		if err != nil {
+			return nil, err
+		}
 	}
 	err = json.Unmarshal(buffer[:length], &response)
 	if err != nil {
 		return nil, err
 	}
-
+	
 	return &net.TCPAddr{address.IP, response.Address.Port, address.Zone}, nil
 }
 
@@ -253,7 +260,7 @@ func RunService(serviceinfo *ServiceInfo, handler ServiceHandler) error {
 	if err != nil {
 		return err
 	}
-
+	
 	connection, err := net.DialTCP(TCP_PROTOCOL, nil, address)
 	if err != nil {
 		return err
