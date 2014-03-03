@@ -1,6 +1,6 @@
 CURDIR := "$(shell pwd)"
 
-all: service randomservice serviceuser registryserver
+all: service randomservice serviceuser registryserver signalHandler menu
 
 service:
 	export GOPATH=${CURDIR}; \
