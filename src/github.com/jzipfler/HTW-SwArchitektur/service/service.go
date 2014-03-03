@@ -101,18 +101,17 @@ func GetRegistryAddress() (*net.TCPAddr, error) {
 	buffer := make([]byte, PACKET_SIZE)
 
 	connection, err := net.ListenUDP(UDP_PROTOCOL, UDP_ANY_ADDR)
-	connection2, err := net.ListenMulticastUDP(UDP_PROTOCOL, nil, MULTICAT_ADDR)
+	//connection, err := net.ListenMulticastUDP(UDP_PROTOCOL, nil, MULTICAT_ADDR)
 	if err != nil {
 		return nil, err
 	}
 	defer connection.Close()
-	defer connection2.Close()
 
 	bytes, err := json.Marshal(request)
 	if err != nil {
 		return nil, err
 	}
-	_, err = connection2.WriteToUDP(bytes, MULTICAT_ADDR)
+	_, err = connection.WriteToUDP(bytes, MULTICAT_ADDR)
 	if err != nil {
 		return nil, err
 	}
@@ -124,11 +123,7 @@ func GetRegistryAddress() (*net.TCPAddr, error) {
 	connection.SetReadDeadline(time.Now().Add(time.Second * 4))
 	length, address, err := connection.ReadFromUDP(buffer)
 	if err != nil {
-		connection2.SetReadDeadline(time.Now().Add(time.Second * 4))
-		length, address, err = connection2.ReadFromUDP(buffer)
-		if err != nil {
-			return nil, err
-		}
+		return nil, err
 	}
 	err = json.Unmarshal(buffer[:length], &response)
 	if err != nil {
