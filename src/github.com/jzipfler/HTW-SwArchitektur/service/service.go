@@ -1,3 +1,9 @@
+// Package service provides functions and types to create
+// and manage services in a LAN network. It also offers
+// functions to query information about running services.
+// The service discovery is done via a central service called
+// "Registry", which itself is discovered via multicast. This
+// means is it not necessary to configure static address information.
 package service
 
 import (
@@ -8,14 +14,14 @@ import (
 	"strconv"
 )
 
-// Information about service argument/parameter
+// Information about service argument/parameter.
 type ArgumentInfo struct {
 	Name        string
 	Type        string
 	Description string
 }
 
-// Information about service
+// Information about a service.
 type ServiceInfo struct {
 	Name        string
 	ResultType  string
@@ -23,65 +29,74 @@ type ServiceInfo struct {
 	Arguments   []ArgumentInfo
 }
 
-// Information about service and address
+// Information about service that belongs to a specific address.
 type ServiceInfoAddress struct {
 	Address string
 	Info    ServiceInfo
 }
 
-// Call parameter for a service
+// Call parameter for a service.
+// This structure is sent to a service when it's invoked.
 type ServiceCall struct {
 	Name      string
 	Arguments []string
 }
 
-// Return value of a service
+// Return value of a service.
+// This structure is sent upon return of a service.
 type ServiceResult struct {
 	Result string
 }
 
-// Service handler function
+// Definition of the Service handler function, which will be
+// invoked when the service is being called.
 type ServiceHandler func(*ServiceCall) string
 
-// Service lookup request (name to address)
-type LookupRequest struct {
+// Service information lookup request. This is used to query
+// information about a service. Valid values are "address"
+// (which returns the network address of the given service name,
+// "info" (which returns information about the given service name
+// and "list" (which returns a map (name to info) containing all
+// available services.
+type LookupInfoRequest struct {
 	Operation   string
 	ServiceName string
 }
 
-// Response to lookup request (holds service address)
+// Response to a service address lookup request (holds service address).
 type LookupAddressResponse struct {
 	Address net.TCPAddr
 }
 
 var (
-	// Multicast address registry ip resolution
+	// Multicast address for resolution of the registry address.
 	MULTICAT_ADDR, _ = net.ResolveUDPAddr("udp4", "224.0.0.1:32001")
-	// Used to send multicast messages to self
+	// Used to send multicast messages to own address.
 	MULTICAT_SELF_ADDR, _ = net.ResolveUDPAddr("udp4", "127.0.0.1:32001")
-	// Any UDP address
+	// Any UDP address.
 	UDP_ANY_ADDR, _ = net.ResolveUDPAddr("udp4", "0.0.0.0:0")
-	// Any TCP address
+	// Any TCP address.
 	TCP_ANY_ADDR, _ = net.ResolveTCPAddr("tcp4", "0.0.0.0:0")
-	// Used udp protocol (udp, udp4, udp6)
+	// UDP protocol to use (any of: "udp", "udp4", "udp6").
 	UDP_PROTOCOL = "udp"
-	// Used tcp protocol (tcp, tcp4, tcp6)
+	// TCP protocol to use (any of: "tcp", "tcp4", "tcp6")
 	TCP_PROTOCOL = "tcp"
-	// Max packt/buffer size for send/receive
+	// Maximum packet/buffer size for send/receive calls.
 	PACKET_SIZE = 0x10000
-	// Operation: get service address
+	// Operation for LookupInfoRequest: get service address.
 	OPERATION_ADDRESS = "address"
-	// Operation: get service info
+	// Operation for LookupInfoRequest: get service info.
 	OPERATION_INFO = "info"
-	// Operation: get service list
+	// Operation for LookupInfoRequest: get service list.
 	OPERATION_LIST = "list"
-	// Map: name --> service info address
+	// Map which contains information about all available services.
+	// The mapping is from service name to service information.
 	services = make(map[string]ServiceInfoAddress)
 )
 
-// Returns the address of the currently active registry (if any).
+// Returns the address of any registry which is currently active.
 func GetRegistryAddress() (*net.TCPAddr, error) {
-	request := LookupRequest{OPERATION_ADDRESS, "registry"}
+	request := LookupInfoRequest{OPERATION_ADDRESS, "registry"}
 	response := LookupAddressResponse{}
 	buffer := make([]byte, PACKET_SIZE)
 
@@ -116,9 +131,13 @@ func GetRegistryAddress() (*net.TCPAddr, error) {
 	return &net.TCPAddr{address.IP, response.Address.Port, address.Zone}, nil
 }
 
-// Get service info for operation as JOSN
+// Get service information for the given operation as JOSN.
+// Valid operations are:
+// * "address"
+// * "info"
+// * "list"
 func GetServiceData(operation, name string) ([]byte, error) {
-	request := LookupRequest{operation, name}
+	request := LookupInfoRequest{operation, name}
 	buffer := make([]byte, PACKET_SIZE)
 
 	address, err := GetRegistryAddress()
@@ -149,7 +168,7 @@ func GetServiceData(operation, name string) ([]byte, error) {
 	return buffer[:length], nil
 }
 
-// Returns the address of the given service name.
+// Returns the address for the given service name.
 func GetServiceAddress(name string) (*net.TCPAddr, error) {
 	response := LookupAddressResponse{}
 	buffer, err := GetServiceData(OPERATION_ADDRESS, name);
@@ -181,10 +200,10 @@ func GetServiceInfo(name string) (*ServiceInfoAddress, error) {
 	return &response, nil
 }
 
-// Returns a map (map[string]ServiceInfoAddress) containing all services
-func GetServiceList(name string) (*map[string]ServiceInfoAddress, error) {
+// Returns a map (map[string]ServiceInfoAddress) containing all services.
+func GetServiceList() (*map[string]ServiceInfoAddress, error) {
 	response := make(map[string]ServiceInfoAddress)
-	buffer, err := GetServiceData(OPERATION_ADDRESS, name);
+	buffer, err := GetServiceData(OPERATION_ADDRESS, "");
 	if err != nil {
 		return nil, err
 	}
@@ -197,7 +216,7 @@ func GetServiceList(name string) (*map[string]ServiceInfoAddress, error) {
 	return &response, nil
 }
 
-// Called before the service handler is executed.
+// Handles connections to a service and calls the handler specified in RunService().
 func handleServiceConnection(connection *net.TCPConn, handler ServiceHandler) error {
 	servicecall := ServiceCall{}
 	buffer := make([]byte, PACKET_SIZE)
@@ -227,7 +246,8 @@ func handleServiceConnection(connection *net.TCPConn, handler ServiceHandler) er
 	return nil
 }
 
-// Registers and runs a service in the registry.
+// Registers and starts a service. Any requests to the service are given to
+// the user defined handler. Note that this function blocks forever.
 func RunService(serviceinfo *ServiceInfo, handler ServiceHandler) error {
 	address, err := GetRegistryAddress()
 	if err != nil {
@@ -271,7 +291,8 @@ func RunService(serviceinfo *ServiceInfo, handler ServiceHandler) error {
 	return nil
 }
 
-// Answers multicast reguests for the registry address.
+// Server which listens for incoming multicast requests. Upon receive of a
+// request it sends the registry address to the asking client.
 func registryLookupService(address *net.TCPAddr) error {
 	response := LookupAddressResponse{*address}
 	buffer := make([]byte, PACKET_SIZE)
@@ -301,10 +322,11 @@ func registryLookupService(address *net.TCPAddr) error {
 	return nil
 }
 
-// Registers new services and service name lookup.
+// Handles new connections to the registry server. For example
+// address lookup requests or query service info requests.
 func handleRegistryConnection(connection *net.TCPConn) error {
 	serviceinfoaddress := ServiceInfoAddress{}
-	lookuprequest := LookupRequest{}
+	lookuprequest := LookupInfoRequest{}
 	buffer := make([]byte, PACKET_SIZE)
 
 	defer connection.Close()
@@ -346,7 +368,8 @@ func handleRegistryConnection(connection *net.TCPConn) error {
 	return nil
 }
 
-// Starts a registry server.
+// Starts a registry server on "0.0.0.0" alias any address. Note that this
+// function blocks forever.
 func RunRegistryServer() error {
 	listener, err := net.ListenTCP(TCP_PROTOCOL, TCP_ANY_ADDR)
 	if err != nil {
@@ -369,6 +392,7 @@ func RunRegistryServer() error {
 	}
 }
 
+// Invokes the service specified by name with the given arguments.
 func CallService(name string, args ...string) (string, error) {
 	servicecall := ServiceCall{name, args}
 	serviceresult := ServiceResult{}
