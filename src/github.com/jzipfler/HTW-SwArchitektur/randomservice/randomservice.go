@@ -26,7 +26,7 @@ func randomHandler(servicecall *service.ServiceCall) string {
 func main() {
 	// register "random"-service
 	fmt.Println("running...")
-	var err error = service.RegisterService(&serviceRandom, randomHandler)
+	var err error = service.RunService(&serviceRandom, randomHandler)
 	if err != nil {
 		fmt.Println("Error occured: ")
 		fmt.Println(err)

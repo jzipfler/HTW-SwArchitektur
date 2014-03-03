@@ -45,11 +45,12 @@ type ServiceHandler func(*ServiceCall) string
 
 // Service lookup request (name to address)
 type LookupRequest struct {
+	Operation   string
 	ServiceName string
 }
 
 // Response to lookup request (holds service address)
-type LookupResponse struct {
+type LookupAddressResponse struct {
 	Address net.TCPAddr
 }
 
@@ -68,14 +69,20 @@ var (
 	TCP_PROTOCOL = "tcp"
 	// Max packt/buffer size for send/receive
 	PACKET_SIZE = 0x10000
+	// Operation: get service address
+	OPERATION_ADDRESS = "address"
+	// Operation: get service info
+	OPERATION_INFO = "info"
+	// Operation: get service list
+	OPERATION_LIST = "list"
 	// Map: name --> service info address
 	services = make(map[string]ServiceInfoAddress)
 )
 
 // Returns the address of the currently active registry (if any).
-func LookupRegistryAddress() (*net.TCPAddr, error) {
-	request := LookupRequest{}
-	response := LookupResponse{}
+func GetRegistryAddress() (*net.TCPAddr, error) {
+	request := LookupRequest{OPERATION_ADDRESS, "registry"}
+	response := LookupAddressResponse{}
 	buffer := make([]byte, PACKET_SIZE)
 
 	connection, err := net.ListenUDP(UDP_PROTOCOL, UDP_ANY_ADDR)
@@ -109,13 +116,12 @@ func LookupRegistryAddress() (*net.TCPAddr, error) {
 	return &net.TCPAddr{address.IP, response.Address.Port, address.Zone}, nil
 }
 
-// Returns the address of the given service name.
-func LookupServiceAddress(name string) (*net.TCPAddr, error) {
-	request := LookupRequest{name}
-	response := LookupResponse{}
+// Get service info for operation as JOSN
+func GetServiceData(operation, name string) ([]byte, error) {
+	request := LookupRequest{operation, name}
 	buffer := make([]byte, PACKET_SIZE)
 
-	address, err := LookupRegistryAddress()
+	address, err := GetRegistryAddress()
 	if err != nil {
 		return nil, err
 	}
@@ -139,14 +145,59 @@ func LookupServiceAddress(name string) (*net.TCPAddr, error) {
 	if err != nil {
 		return nil, err
 	}
-	err = json.Unmarshal(buffer[:length], &response)
+
+	return buffer[:length], nil
+}
+
+// Returns the address of the given service name.
+func GetServiceAddress(name string) (*net.TCPAddr, error) {
+	response := LookupAddressResponse{}
+	buffer, err := GetServiceData(OPERATION_ADDRESS, name);
 	if err != nil {
 		return nil, err
 	}
 
-	return &(response.Address), nil
+	err = json.Unmarshal(buffer, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return &response.Address, nil
 }
 
+// Returns ServiceInfoAddress for the given service name.
+func GetServiceInfo(name string) (*ServiceInfoAddress, error) {
+	response := ServiceInfoAddress{}
+	buffer, err := GetServiceData(OPERATION_ADDRESS, name);
+	if err != nil {
+		return nil, err
+	}
+	
+	err = json.Unmarshal(buffer, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return &response, nil
+}
+
+// Returns a map (map[string]ServiceInfoAddress) containing all services
+func GetServiceList(name string) (*map[string]ServiceInfoAddress, error) {
+	response := make(map[string]ServiceInfoAddress)
+	buffer, err := GetServiceData(OPERATION_ADDRESS, name);
+	if err != nil {
+		return nil, err
+	}
+	
+	err = json.Unmarshal(buffer, &response)
+	if err != nil {
+		return nil, err
+	}
+
+	return &response, nil
+}
+
+// Called before the service handler is executed.
 func handleServiceConnection(connection *net.TCPConn, handler ServiceHandler) error {
 	servicecall := ServiceCall{}
 	buffer := make([]byte, PACKET_SIZE)
@@ -176,9 +227,9 @@ func handleServiceConnection(connection *net.TCPConn, handler ServiceHandler) er
 	return nil
 }
 
-// Registers a service in the registry.
-func RegisterService(serviceinfo *ServiceInfo, handler ServiceHandler) error {
-	address, err := LookupRegistryAddress()
+// Registers and runs a service in the registry.
+func RunService(serviceinfo *ServiceInfo, handler ServiceHandler) error {
+	address, err := GetRegistryAddress()
 	if err != nil {
 		return err
 	}
@@ -222,7 +273,7 @@ func RegisterService(serviceinfo *ServiceInfo, handler ServiceHandler) error {
 
 // Answers multicast reguests for the registry address.
 func registryLookupService(address *net.TCPAddr) error {
-	response := LookupResponse{*address}
+	response := LookupAddressResponse{*address}
 	buffer := make([]byte, PACKET_SIZE)
 
 	connection, err := net.ListenMulticastUDP(UDP_PROTOCOL, nil, MULTICAT_ADDR)
@@ -254,7 +305,6 @@ func registryLookupService(address *net.TCPAddr) error {
 func handleRegistryConnection(connection *net.TCPConn) error {
 	serviceinfoaddress := ServiceInfoAddress{}
 	lookuprequest := LookupRequest{}
-	lookupresponse := LookupResponse{}
 	buffer := make([]byte, PACKET_SIZE)
 
 	defer connection.Close()
@@ -272,11 +322,18 @@ func handleRegistryConnection(connection *net.TCPConn) error {
 		return err
 	}
 
-	if lookuprequest.ServiceName != "" {
-		fmt.Println("service lookup:", lookuprequest)
+	if lookuprequest.Operation == OPERATION_ADDRESS {
+		fmt.Println("service address:", lookuprequest)
 		address, _ := net.ResolveTCPAddr(TCP_PROTOCOL, services[lookuprequest.ServiceName].Address)
-		lookupresponse.Address = *address
-		bytes, _ := json.Marshal(lookupresponse)
+		bytes, _ := json.Marshal(LookupAddressResponse{*address})
+		connection.Write(bytes)
+	} else if lookuprequest.Operation == OPERATION_INFO {
+		fmt.Println("service info:", lookuprequest)
+		bytes, _ := json.Marshal(services[lookuprequest.ServiceName])
+		connection.Write(bytes)
+	} else if lookuprequest.Operation == OPERATION_LIST {
+		fmt.Println("service list:", lookuprequest)
+		bytes, _ := json.Marshal(services)
 		connection.Write(bytes)
 	} else if serviceinfoaddress.Address != "" {
 		address, _ := net.ResolveTCPAddr(TCP_PROTOCOL, connection.RemoteAddr().String())
@@ -317,7 +374,7 @@ func CallService(name string, args ...string) (string, error) {
 	serviceresult := ServiceResult{}
 	buffer := make([]byte, PACKET_SIZE)
 
-	address, err := LookupServiceAddress(name)
+	address, err := GetServiceAddress(name)
 	if err != nil {
 		return "", err
 	}
