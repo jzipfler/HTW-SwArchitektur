@@ -115,10 +115,6 @@ func GetRegistryAddressFromInterface(intf *net.Interface, ch chan *net.TCPAddr) 
 	if err != nil {
 		return
 	}
-	_, err = connection.WriteToUDP(bytes, MULTICAT_SELF_ADDR)
-	if err != nil {
-		return
-	}
 
 	connection.SetReadDeadline(time.Now().Add(time.Second * 4))
 	length, address, err := connection.ReadFromUDP(buffer)
@@ -183,7 +179,7 @@ func GetRegistryAddress() (*net.TCPAddr, error) {
 	select {
     case address := <-ch:
         return address, nil
-    case <-time.After(5 * time.Second):
+    case <-time.After(6 * time.Second):
         return nil, errors.New("error: no registry found!")
     }
 	
@@ -356,7 +352,7 @@ func registryLookupServiceOnInterface(address *net.TCPAddr, intf *net.Interface,
 	response := LookupAddressResponse{*address}
 	buffer := make([]byte, PACKET_SIZE)
 
-	connection, err := net.ListenMulticastUDP(UDP_PROTOCOL, nil, MULTICAT_ADDR)
+	connection, err := net.ListenMulticastUDP(UDP_PROTOCOL, intf, MULTICAT_ADDR)
 	if err != nil {
 		return
 	}
