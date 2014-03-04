@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 	"github.com/jzipfler/HTW-SwArchitektur/service"
+	"math/rand"
+	"strconv"
+	"time"
 )
 
 // Example service info definition
@@ -17,13 +20,16 @@ var serviceRandom = service.ServiceInfo{
 
 // Main function of the "random service"
 func randomHandler(servicecall *service.ServiceCall) string {
-	// TODO: generate and return random number
-	fmt.Println("random():", 42)
+	number := rand.Intn(1000)
+	
+	fmt.Println("random():", number)
 
-	return "42"
+	return strconv.Itoa(number)
 }
 
 func main() {
+	rand.Seed(time.Now().Unix())
+
 	// register "random"-service
 	fmt.Println("running...")
 	var err error = service.RunService(&serviceRandom, randomHandler)

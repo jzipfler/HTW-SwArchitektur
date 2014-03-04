@@ -8,6 +8,7 @@ package service
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -94,43 +95,99 @@ var (
 	services = make(map[string]ServiceInfoAddress)
 )
 
-// Returns the address of any registry which is currently active.
-func GetRegistryAddress() (*net.TCPAddr, error) {
+// Returns the address of any registry which is currently active on the given interface.
+func GetRegistryAddressFromInterface(intf *net.Interface, ch chan *net.TCPAddr) {
 	request := LookupInfoRequest{OPERATION_ADDRESS, "registry"}
 	response := LookupAddressResponse{}
 	buffer := make([]byte, PACKET_SIZE)
 
-	connection, err := net.ListenUDP(UDP_PROTOCOL, UDP_ANY_ADDR)
-	//connection, err := net.ListenMulticastUDP(UDP_PROTOCOL, nil, MULTICAT_ADDR)
+	connection, err := net.ListenMulticastUDP(UDP_PROTOCOL, intf, MULTICAT_ADDR)
 	if err != nil {
-		return nil, err
+		return
 	}
 	defer connection.Close()
 
 	bytes, err := json.Marshal(request)
 	if err != nil {
-		return nil, err
+		return
 	}
 	_, err = connection.WriteToUDP(bytes, MULTICAT_ADDR)
 	if err != nil {
-		return nil, err
+		return
 	}
 	_, err = connection.WriteToUDP(bytes, MULTICAT_SELF_ADDR)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	connection.SetReadDeadline(time.Now().Add(time.Second * 4))
 	length, address, err := connection.ReadFromUDP(buffer)
 	if err != nil {
-		return nil, err
+		return
 	}
 	err = json.Unmarshal(buffer[:length], &response)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	return &net.TCPAddr{address.IP, response.Address.Port, address.Zone}, nil
+	ch <- &net.TCPAddr{address.IP, response.Address.Port, address.Zone}
+}
+
+// Returns the address of any registry which is currently active localhost.
+func GetRegistryAddressFromLocalhost(ch chan *net.TCPAddr) {
+	request := LookupInfoRequest{OPERATION_ADDRESS, "registry"}
+	response := LookupAddressResponse{}
+	buffer := make([]byte, PACKET_SIZE)
+
+	connection, err := net.ListenUDP(UDP_PROTOCOL, UDP_ANY_ADDR)
+	if err != nil {
+		return
+	}
+	defer connection.Close()
+
+	bytes, err := json.Marshal(request)
+	if err != nil {
+		return
+	}
+	_, err = connection.WriteToUDP(bytes, MULTICAT_SELF_ADDR)
+	if err != nil {
+		return
+	}
+
+	connection.SetReadDeadline(time.Now().Add(time.Second * 4))
+	length, address, err := connection.ReadFromUDP(buffer)
+	if err != nil {
+		return
+	}
+	err = json.Unmarshal(buffer[:length], &response)
+	if err != nil {
+		return
+	}
+
+	ch <- &net.TCPAddr{address.IP, response.Address.Port, address.Zone}
+}
+
+// Returns the address of any registry which is currently active.
+func GetRegistryAddress() (*net.TCPAddr, error) {
+	ch := make(chan *net.TCPAddr, 1)
+	intf, err := net.Interfaces()
+	if err != nil {
+		return nil, err
+	}
+	
+	go GetRegistryAddressFromLocalhost(ch)
+	for _, i := range intf {
+		go GetRegistryAddressFromInterface(&i, ch)
+	}
+	
+	select {
+    case address := <-ch:
+        return address, nil
+    case <-time.After(5 * time.Second):
+        return nil, errors.New("error: no registry found!")
+    }
+	
+	return nil, nil
 }
 
 // Get service information for the given operation as JOSN.
@@ -293,34 +350,54 @@ func RunService(serviceinfo *ServiceInfo, handler ServiceHandler) error {
 	return nil
 }
 
-// Server which listens for incoming multicast requests. Upon receive of a
+// Server which listens for incoming multicast requests on the specified interface. Upon receive of a
 // request it sends the registry address to the asking client.
-func registryLookupService(address *net.TCPAddr) error {
+func registryLookupServiceOnInterface(address *net.TCPAddr, intf *net.Interface, ch chan int) {
 	response := LookupAddressResponse{*address}
 	buffer := make([]byte, PACKET_SIZE)
 
 	connection, err := net.ListenMulticastUDP(UDP_PROTOCOL, nil, MULTICAT_ADDR)
 	if err != nil {
-		return err
+		return
 	}
 	defer connection.Close()
 
 	bytes, err := json.Marshal(response)
 	if err != nil {
-		return err
+		return
 	}
 
 	for {
 		_, sender, err := connection.ReadFromUDP(buffer)
 		if err != nil {
-			return err
+			return
 		}
 		_, err = connection.WriteToUDP(bytes, sender)
 		if err != nil {
-			return err
+			return
 		}
 	}
+	
+	ch <- 0
+}
 
+// Server which listens for incoming multicast requests. Upon receive of a
+// request it sends the registry address to the asking client.
+func registryLookupService(address *net.TCPAddr) error {
+	ch := make(chan int)
+	intf, err := net.Interfaces()
+	if err != nil {
+		return err
+	}
+	
+	for _, i := range intf {
+		go registryLookupServiceOnInterface(address, &i, ch)
+	}
+	
+	for _, _ = range intf {
+		<- ch
+	}
+	
 	return nil
 }
 
