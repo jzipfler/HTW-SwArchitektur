@@ -116,7 +116,7 @@ func GetRegistryAddressFromInterface(intf net.Interface, ch chan *net.TCPAddr) {
 		return
 	}
 
-	connection.SetReadDeadline(time.Now().Add(time.Second * 4))
+	connection.SetReadDeadline(time.Now().Add(time.Second))
 	length, address, err := connection.ReadFromUDP(buffer)
 	if err != nil {
 		return
@@ -150,7 +150,7 @@ func GetRegistryAddressFromLocalhost(ch chan *net.TCPAddr) {
 		return
 	}
 
-	connection.SetReadDeadline(time.Now().Add(time.Second * 4))
+	connection.SetReadDeadline(time.Now().Add(time.Second))
 	length, address, err := connection.ReadFromUDP(buffer)
 	if err != nil {
 		return
