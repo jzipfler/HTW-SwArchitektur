@@ -96,12 +96,12 @@ var (
 )
 
 // Returns the address of any registry which is currently active on the given interface.
-func GetRegistryAddressFromInterface(intf *net.Interface, ch chan *net.TCPAddr) {
+func GetRegistryAddressFromInterface(intf net.Interface, ch chan *net.TCPAddr) {
 	request := LookupInfoRequest{OPERATION_ADDRESS, "registry"}
 	response := LookupAddressResponse{}
 	buffer := make([]byte, PACKET_SIZE)
 
-	connection, err := net.ListenMulticastUDP(UDP_PROTOCOL, intf, MULTICAT_ADDR)
+	connection, err := net.ListenMulticastUDP(UDP_PROTOCOL, &intf, MULTICAT_ADDR)
 	if err != nil {
 		return
 	}
@@ -173,7 +173,7 @@ func GetRegistryAddress() (*net.TCPAddr, error) {
 	
 	go GetRegistryAddressFromLocalhost(ch)
 	for _, i := range intf {
-		go GetRegistryAddressFromInterface(&i, ch)
+		go GetRegistryAddressFromInterface(i, ch)
 	}
 	
 	select {
@@ -348,11 +348,11 @@ func RunService(serviceinfo *ServiceInfo, handler ServiceHandler) error {
 
 // Server which listens for incoming multicast requests on the specified interface. Upon receive of a
 // request it sends the registry address to the asking client.
-func registryLookupServiceOnInterface(address *net.TCPAddr, intf *net.Interface, ch chan int) {
+func registryLookupServiceOnInterface(address *net.TCPAddr, intf net.Interface, ch chan int) {
 	response := LookupAddressResponse{*address}
 	buffer := make([]byte, PACKET_SIZE)
 
-	connection, err := net.ListenMulticastUDP(UDP_PROTOCOL, intf, MULTICAT_ADDR)
+	connection, err := net.ListenMulticastUDP(UDP_PROTOCOL, &intf, MULTICAT_ADDR)
 	if err != nil {
 		return
 	}
@@ -387,7 +387,7 @@ func registryLookupService(address *net.TCPAddr) error {
 	}
 	
 	for _, i := range intf {
-		go registryLookupServiceOnInterface(address, &i, ch)
+		go registryLookupServiceOnInterface(address, i, ch)
 	}
 	
 	for _, _ = range intf {
