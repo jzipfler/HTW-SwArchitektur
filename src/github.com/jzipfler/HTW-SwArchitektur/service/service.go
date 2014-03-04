@@ -10,8 +10,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
-	"time"
 	"strconv"
+	"time"
 )
 
 // Information about service argument/parameter.
@@ -119,7 +119,7 @@ func GetRegistryAddress() (*net.TCPAddr, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	connection.SetReadDeadline(time.Now().Add(time.Second * 4))
 	length, address, err := connection.ReadFromUDP(buffer)
 	if err != nil {
@@ -129,7 +129,7 @@ func GetRegistryAddress() (*net.TCPAddr, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	return &net.TCPAddr{address.IP, response.Address.Port, address.Zone}, nil
 }
 
@@ -173,7 +173,7 @@ func GetServiceData(operation, name string) ([]byte, error) {
 // Returns the address for the given service name.
 func GetServiceAddress(name string) (*net.TCPAddr, error) {
 	response := LookupAddressResponse{}
-	buffer, err := GetServiceData(OPERATION_ADDRESS, name);
+	buffer, err := GetServiceData(OPERATION_ADDRESS, name)
 	if err != nil {
 		return nil, err
 	}
@@ -189,11 +189,11 @@ func GetServiceAddress(name string) (*net.TCPAddr, error) {
 // Returns ServiceInfoAddress for the given service name.
 func GetServiceInfo(name string) (*ServiceInfoAddress, error) {
 	response := ServiceInfoAddress{}
-	buffer, err := GetServiceData(OPERATION_ADDRESS, name);
+	buffer, err := GetServiceData(OPERATION_INFO, name)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	err = json.Unmarshal(buffer, &response)
 	if err != nil {
 		return nil, err
@@ -205,11 +205,11 @@ func GetServiceInfo(name string) (*ServiceInfoAddress, error) {
 // Returns a map (map[string]ServiceInfoAddress) containing all services.
 func GetServiceList() (*map[string]ServiceInfoAddress, error) {
 	response := make(map[string]ServiceInfoAddress)
-	buffer, err := GetServiceData(OPERATION_ADDRESS, "");
+	buffer, err := GetServiceData(OPERATION_LIST, "")
 	if err != nil {
 		return nil, err
 	}
-	
+
 	err = json.Unmarshal(buffer, &response)
 	if err != nil {
 		return nil, err
@@ -255,24 +255,24 @@ func RunService(serviceinfo *ServiceInfo, handler ServiceHandler) error {
 	if err != nil {
 		return err
 	}
-	
+
 	connection, err := net.DialTCP(TCP_PROTOCOL, nil, address)
 	if err != nil {
 		return err
 	}
 	defer connection.Close()
-	
+
 	listener, err := net.ListenTCP(TCP_PROTOCOL, TCP_ANY_ADDR)
 	if err != nil {
 		return err
 	}
 	defer listener.Close()
-	
+
 	address, err = net.ResolveTCPAddr(TCP_PROTOCOL, listener.Addr().String())
 	if err != nil {
 		return err
 	}
-	
+
 	bytes, err := json.Marshal(ServiceInfoAddress{strconv.Itoa(address.Port), *serviceinfo})
 	if err != nil {
 		return err

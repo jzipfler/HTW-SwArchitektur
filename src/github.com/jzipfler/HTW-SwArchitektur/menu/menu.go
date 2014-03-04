@@ -3,6 +3,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/jzipfler/HTW-SwArchitektur/service"
 	"github.com/jzipfler/HTW-SwArchitektur/signalHandler"
 	"os"
 )
@@ -12,14 +13,14 @@ const (
 	quit_menu         string = "q"
 	zeigeServiceListe string = "1"
 	zeigeServiceInfos string = "2"
-	starteService     string = "3"
+	serviceAufrufen   string = "3"
 	send_echo_menu    string = "9"
 	MENU_HEADER       string = "------------Menü---------------"
 	FOOTER            string = "-------------------------------"
 	menu_content      string = "Wählen Sie aus den folgenden Einträgen:\n\n" +
 		zeigeServiceListe + "\tServiceliste anzeigen" + "\n" +
 		zeigeServiceInfos + "\tServicebeschreibung anzeigen" + "\n" +
-		starteService + "\tService aufrufen / starten" + "\n" +
+		serviceAufrufen + "\tService aufrufen / starten" + "\n" +
 		send_echo_menu + "\tNachricht an Server senden" + "\n" +
 		"\n" +
 		quit_menu + "\tProgramm beenden\t"
@@ -47,11 +48,27 @@ func menu() {
 			fmt.Println("\nProgramm wird beendet...")
 			os.Exit(0)
 		case line == zeigeServiceListe:
-			fmt.Println("TODO:::")
+			serviceInformationAdresse, err := service.GetServiceList()
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			fmt.Println(*serviceInformationAdresse)
 		case line == zeigeServiceInfos:
-			fmt.Println("TODO:::")
-		case line == starteService:
-			fmt.Println("TODO:::")
+			var serviceAufruf string
+			fmt.Scan(&serviceAufruf)
+			serviceInformation, err := service.GetServiceInfo(serviceAufruf)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			fmt.Println(*serviceInformation)
+		case line == serviceAufrufen:
+			var serviceAufruf string
+			fmt.Scan(&serviceAufruf)
+			rueckgabe, err := service.CallService(serviceAufruf)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			fmt.Println(rueckgabe)
 		case line == send_echo_menu:
 			sendEcho()
 		}
