@@ -93,6 +93,8 @@ var (
 	// Map which contains information about all available services.
 	// The mapping is from service name to service information.
 	services = make(map[string]ServiceInfoAddress)
+	// Cache for registry address.
+	registryAddress *net.TCPAddr = nil
 )
 
 // Returns the address of any registry which is currently active on the given interface.
@@ -165,6 +167,10 @@ func GetRegistryAddressFromLocalhost(ch chan *net.TCPAddr) {
 
 // Returns the address of any registry which is currently active.
 func GetRegistryAddress() (*net.TCPAddr, error) {
+	if registryAddress != nil {
+		return registryAddress, nil
+	}
+
 	ch := make(chan *net.TCPAddr, 1)
 	intf, err := net.Interfaces()
 	if err != nil {
@@ -202,7 +208,16 @@ func GetServiceData(operation, name string) ([]byte, error) {
 
 	connection, err := net.DialTCP(TCP_PROTOCOL, nil, address)
 	if err != nil {
-		return nil, err
+		registryAddress = nil
+		address, err = GetRegistryAddress()
+		if err != nil {
+			return nil, err
+		}
+		
+		connection, err = net.DialTCP(TCP_PROTOCOL, nil, address)
+		if err != nil {
+			return nil, err
+		}
 	}
 	defer connection.Close()
 
