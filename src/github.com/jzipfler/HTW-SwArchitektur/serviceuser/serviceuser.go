@@ -9,20 +9,27 @@ import (
 func main() {
 	fmt.Println("running...")
 	
-	// Lookup "random"-service address
+	_, err := service.CallService("concatenate", "isprime", "random", "isrndprime")
+	if err != nil {
+		fmt.Println("error: CallService()")
+	}
+	
 	for {
 		time.Sleep(time.Millisecond * 2000)
-		/*address, err := service.LookupServiceAddress("random")
-		if err == nil {
-			fmt.Println(address.String())
-		} else {
-			fmt.Println(err.Error())
-		}*/
-		rnd, err := service.CallService("random")
+		
+		/*rnd, err := service.CallService("random")
 		if err == nil {
 			fmt.Println("random():", rnd)
 		} else {
 			fmt.Println("error: CallService()")
+		}*/
+		
+		isprime, err := service.CallService("isrndprime")
+		if err == nil {
+			fmt.Println(isprime)
+		} else {
+			fmt.Println("error: CallService()")
 		}
+		
 	}
 }

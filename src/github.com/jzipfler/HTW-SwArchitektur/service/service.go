@@ -436,23 +436,23 @@ func handleRegistryConnection(connection *net.TCPConn) error {
 	}
 
 	if lookuprequest.Operation == OPERATION_ADDRESS {
-		fmt.Println("service address:", lookuprequest)
+		fmt.Println("service address:", lookuprequest.ServiceName)
 		address, _ := net.ResolveTCPAddr(TCP_PROTOCOL, services[lookuprequest.ServiceName].Address)
 		bytes, _ := json.Marshal(LookupAddressResponse{*address})
 		connection.Write(bytes)
 	} else if lookuprequest.Operation == OPERATION_INFO {
-		fmt.Println("service info:", lookuprequest)
+		fmt.Println("service info:", lookuprequest.ServiceName)
 		bytes, _ := json.Marshal(services[lookuprequest.ServiceName])
 		connection.Write(bytes)
 	} else if lookuprequest.Operation == OPERATION_LIST {
-		fmt.Println("service list:", lookuprequest)
+		fmt.Println("service list")
 		bytes, _ := json.Marshal(services)
 		connection.Write(bytes)
 	} else if serviceinfoaddress.Address != "" {
 		address, _ := net.ResolveTCPAddr(TCP_PROTOCOL, connection.RemoteAddr().String())
 		address.Port, _ = strconv.Atoi(serviceinfoaddress.Address)
 		serviceinfoaddress.Address = address.String()
-		fmt.Println("service registered:", address, serviceinfoaddress)
+		fmt.Println("service registered:", serviceinfoaddress.Info.Name)
 		services[serviceinfoaddress.Info.Name] = serviceinfoaddress
 	}
 

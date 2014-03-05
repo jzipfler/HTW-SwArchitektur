@@ -8,7 +8,6 @@ import (
 	"time"
 )
 
-// Example service info definition
 var serviceRandom = service.ServiceInfo{
 	"random",
 	"int",
@@ -18,9 +17,9 @@ var serviceRandom = service.ServiceInfo{
 	},
 }
 
-// Main function of the "random service"
+// Main function of the "random" service
 func randomHandler(servicecall *service.ServiceCall) string {
-	number := rand.Intn(1000)
+	number := rand.Int()
 	
 	fmt.Println("random():", number)
 
@@ -30,7 +29,7 @@ func randomHandler(servicecall *service.ServiceCall) string {
 func main() {
 	rand.Seed(time.Now().Unix())
 
-	// register "random"-service
+	// register "random" as service
 	fmt.Println("running...")
 	var err error = service.RunService(&serviceRandom, randomHandler)
 	if err != nil {
