@@ -184,6 +184,7 @@ func GetRegistryAddress() (*net.TCPAddr, error) {
 	
 	select {
     case address := <-ch:
+		registryAddress = address
         return address, nil
     case <-time.After(6 * time.Second):
         return nil, errors.New("error: no registry found!")
