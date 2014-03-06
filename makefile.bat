@@ -7,6 +7,6 @@ go install github.com/jzipfler/HTW-SwArchitektur/isprimeservice
 go install github.com/jzipfler/HTW-SwArchitektur/concatenateservice
 go install github.com/jzipfler/HTW-SwArchitektur/serviceuser
 go install github.com/jzipfler/HTW-SwArchitektur/registryserver
-go build github.com/jzipfler/HTW-SwArchitektur/signalHandler
+go build github.com/jzipfler/HTW-SwArchitektur/signalhandler
 go install github.com/jzipfler/HTW-SwArchitektur/menu
 echo done
