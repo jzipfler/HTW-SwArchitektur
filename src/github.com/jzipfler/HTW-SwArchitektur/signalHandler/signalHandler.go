@@ -8,7 +8,7 @@ import (
 	"syscall"
 )
 
-func SignalHandler(q chan bool) {
+func SignalHandlerMitChannel(q chan bool) {
 	var quit bool
 
 	c := make(chan os.Signal, 1)
@@ -29,5 +29,21 @@ func SignalHandler(q chan bool) {
 		}
 		// report the value of quit via the channel
 		q <- quit
+	}
+}
+
+func SignalHandler() {
+	c := make(chan os.Signal, 1)
+	// Signal für CTRL-C abfangen...
+	signal.Notify(c, syscall.SIGINT)
+
+	// foreach signal received
+	for signal := range c {
+		fmt.Println("\nSignal empfangen...")
+		fmt.Println(signal.String())
+		switch signal {
+		case syscall.SIGINT:
+			os.Exit(0)
+		}
 	}
 }
