@@ -2,6 +2,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/jzipfler/HTW-SwArchitektur/service"
 	"github.com/jzipfler/HTW-SwArchitektur/signalHandler"
@@ -15,11 +16,13 @@ const (
 	ZEIGE_SERVICE_LISTE    string = "1"
 	ZEIGE_SERVICE_INFOS    string = "2"
 	AUFRUFEN_SERVICE       string = "3"
-	send_echo_menu         string = "9"
+	KEIN_MENUEEINTRAG      string = "Kein solcher Menüpunkt vorhanden."
 	MENU_HEADER            string = "------------Menü---------------"
 	AUSGABE_HEADER         string = "-----------Ausgabe-------------"
 	FEHLER_HEADER          string = "-----------Fehler--------------"
 	FOOTER                 string = "-------------------------------"
+	SERVICE_HEADER         string = "___________Service_____________"
+	SERVICE_FOOTER         string = "_______________________________"
 	AUSGABE_BEENDEN        string = "Programm wird beendet."
 	ZEILENUMBRUCH          string = "\n"
 	EINGABE                string = "Eingabe: "
@@ -32,7 +35,6 @@ const (
 		ZEIGE_SERVICE_LISTE + "\tServiceliste anzeigen" + ZEILENUMBRUCH +
 		ZEIGE_SERVICE_INFOS + "\tServicebeschreibung anzeigen" + ZEILENUMBRUCH +
 		AUFRUFEN_SERVICE + "\tService aufrufen / starten" + ZEILENUMBRUCH +
-		send_echo_menu + "\tNachricht an Server senden" + ZEILENUMBRUCH +
 		ZEILENUMBRUCH +
 		quit_menu + "\tProgramm beenden"
 )
@@ -44,6 +46,8 @@ func main() {
 	menu()
 }
 
+// Zeigt ein Menü an und verarbeitet die darauf folgende Eingabe.
+// Dabei verzweigt die Verarbeitung in andere Funktionen.
 func menu() {
 	for line := ""; line != quit_menu; {
 		fmt.Printf("%s\n%s\n%s\n", MENU_HEADER, menu_content, FOOTER)
@@ -61,38 +65,37 @@ func menu() {
 			zeigeServiceInformation()
 		case line == AUFRUFEN_SERVICE:
 			aufrufenService()
-		case line == send_echo_menu:
-			sendEcho()
 		default:
-			informationenAusgeben("Kein solcher Menüpunkt vorhanden.", true)
+			informationenAusgeben(KEIN_MENUEEINTRAG, true)
 		}
 	}
 }
 
+// Wenn im Menü die ServiceListe ausgewählt wurde, wird
+// diese Funktion aufgerufen, die die ServiceListe von
+// der Registry abfragt und ausgibt.
 func zeigeServiceListe() {
+	var buffer bytes.Buffer
 	serviceListe, err := service.GetServiceList()
 	if err != nil {
 		informationenAusgeben(err.Error(), true)
 	}
-	fmt.Println(*serviceListe)
-	fmt.Println(ZEILENUMBRUCH)
-	for k, v := range *serviceListe {
-		fmt.Println("String: " + k)
-		fmt.Println("Values:" + ZEILENUMBRUCH)
-		fmt.Println("Adresse: " + v.Address + ZEILENUMBRUCH +
-			"Service-Name: " + v.Info.Name + ZEILENUMBRUCH +
-			"Service-Beschreibung: " + v.Info.Description + ZEILENUMBRUCH +
-			ZEILENUMBRUCH +
-			"Rückgabewert: " + v.Info.ResultType)
-		for argumente := range v.Info.Arguments {
-			fmt.Println(strconv.Itoa(argumente) + ". Argument: " + ZEILENUMBRUCH +
-				"\tName: " + v.Info.Arguments[argumente].Name + ZEILENUMBRUCH +
-				"\tTyp: " + v.Info.Arguments[argumente].Type + ZEILENUMBRUCH +
-				"\tBeschreibung: " + v.Info.Arguments[argumente].Description)
-		}
+	for key, serviceInfoAdresse := range *serviceListe {
+		buffer.WriteString(ZEILENUMBRUCH +
+			SERVICE_HEADER + ZEILENUMBRUCH + ZEILENUMBRUCH +
+			"\t   " + key + ZEILENUMBRUCH +
+			SERVICE_FOOTER + ZEILENUMBRUCH)
+		buffer.WriteString("SERVICE CONTRACT:" + ZEILENUMBRUCH + ZEILENUMBRUCH)
+		buffer.WriteString(verarbeiteServiceInfoAddress(serviceInfoAdresse))
+		informationenAusgeben(buffer.String(), false)
 	}
 }
 
+// Wenn im Menü der Punkt für die Information eines Services
+// aufgerufen wurde, wird in diesem Menü nach dem Service
+// befragt, über den Informationen eingeholt werden sollen.
+// Danach werden die verfügbaren Informationen über diesen
+// ausgegeben.
 func zeigeServiceInformation() {
 	var serviceName string
 	fmt.Println(ZEILENUMBRUCH + SERVICE_INFOS_VORGEHEN)
@@ -102,21 +105,37 @@ func zeigeServiceInformation() {
 	if err != nil {
 		informationenAusgeben(err.Error(), true)
 	}
-	fmt.Println(*serviceInformation)
+	informationenAusgeben(verarbeiteServiceInfoAddress(*serviceInformation), false)
 }
 
+// Wenn der Punkt zum ausführen eines Services aus dem Menü
+// ausgewählt wurde, wird diese Funktion aufgerufen.
+// Diese fragt nach, welcher Service gestartet werden soll
+// und verarbeitet alle Informationen zum starten des Services.
 func aufrufenService() {
 	var serviceName string
 	fmt.Println(ZEILENUMBRUCH + AUFRUFEN_SERVICE_VORGEHEN)
 	fmt.Print(EINGABE_SERVICE_NAME)
 	fmt.Scan(&serviceName)
+	serviceInformation, err := service.GetServiceInfo(serviceName)
+	if err != nil {
+		informationenAusgeben(err.Error(), true)
+		return
+	}
+	if serviceInformation.Info.Arguments[0].Type != "void" {
+		informationenAusgeben("Service hat mehrere Parameter.\nDies wird noch nicht unterstützt.", true)
+		return
+	}
 	serviceAusgabe, err := service.CallService(serviceName)
 	if err != nil {
 		informationenAusgeben(err.Error(), true)
 	}
-	fmt.Println(serviceAusgabe)
+	informationenAusgeben(serviceAusgabe, false)
 }
 
+// Diese Funktion dient als Hilfsfunktion.
+// Diese wird für jede Ausgabe die gemacht wird genutzt
+// um über und unter dem Text einen "Header" bzw. "Footer" anzuzeigen.
 func informationenAusgeben(infos string, fehlerAusgabe bool) {
 	if fehlerAusgabe {
 		fmt.Println(FEHLER_HEADER)
@@ -127,6 +146,21 @@ func informationenAusgeben(infos string, fehlerAusgabe bool) {
 	fmt.Println(FOOTER + ZEILENUMBRUCH)
 }
 
-func sendEcho() {
-	fmt.Println("\n\nIn der sendEcho() Funktion\n")
+// Diese Methode verarbeitet die übergebene ServiceInfoAddress
+// und gibt einen String zurück indem diese Datenstruktur
+// formatiert und mit Bezeichnern abgelegt ist.
+func verarbeiteServiceInfoAddress(serviceInfoAddress service.ServiceInfoAddress) string {
+	var buffer bytes.Buffer
+	buffer.WriteString("Adresse: " + serviceInfoAddress.Address + ZEILENUMBRUCH +
+		"Service-Name: " + serviceInfoAddress.Info.Name + ZEILENUMBRUCH +
+		"Service-Beschreibung: " + serviceInfoAddress.Info.Description + ZEILENUMBRUCH +
+		ZEILENUMBRUCH +
+		"Rückgabewert: " + serviceInfoAddress.Info.ResultType + ZEILENUMBRUCH)
+	for index := range serviceInfoAddress.Info.Arguments {
+		buffer.WriteString(strconv.Itoa(index+1) + ". Argument: " + ZEILENUMBRUCH +
+			"\tBezeichnung:\t" + serviceInfoAddress.Info.Arguments[index].Name + ZEILENUMBRUCH +
+			"\tTyp:\t\t" + serviceInfoAddress.Info.Arguments[index].Type + ZEILENUMBRUCH +
+			"\tBeschreibung:\t" + serviceInfoAddress.Info.Arguments[index].Description + ZEILENUMBRUCH)
+	}
+	return buffer.String()
 }
