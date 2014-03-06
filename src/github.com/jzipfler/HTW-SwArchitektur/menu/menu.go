@@ -6,6 +6,7 @@ import (
 	"github.com/jzipfler/HTW-SwArchitektur/service"
 	"github.com/jzipfler/HTW-SwArchitektur/signalHandler"
 	"os"
+	"strconv"
 )
 
 const (
@@ -74,6 +75,22 @@ func zeigeServiceListe() {
 		informationenAusgeben(err.Error(), true)
 	}
 	fmt.Println(*serviceListe)
+	fmt.Println(ZEILENUMBRUCH)
+	for k, v := range *serviceListe {
+		fmt.Println("String: " + k)
+		fmt.Println("Values:" + ZEILENUMBRUCH)
+		fmt.Println("Adresse: " + v.Address + ZEILENUMBRUCH +
+			"Service-Name: " + v.Info.Name + ZEILENUMBRUCH +
+			"Service-Beschreibung: " + v.Info.Description + ZEILENUMBRUCH +
+			ZEILENUMBRUCH +
+			"Rückgabewert: " + v.Info.ResultType)
+		for argumente := range v.Info.Arguments {
+			fmt.Println(strconv.Itoa(argumente) + ". Argument: " + ZEILENUMBRUCH +
+				"\tName: " + v.Info.Arguments[argumente].Name + ZEILENUMBRUCH +
+				"\tTyp: " + v.Info.Arguments[argumente].Type + ZEILENUMBRUCH +
+				"\tBeschreibung: " + v.Info.Arguments[argumente].Description)
+		}
+	}
 }
 
 func zeigeServiceInformation() {
