@@ -13,4 +13,14 @@ Repository, dass ein kleines Projekt zur Vorlesung Softwarearchitektur an der HT
 Hier noch der Link zur GitHub-Webpage dieses Projektes:
 http://jzipfler.github.io/HTW-SwArchitektur
 
-Das Ganze dient unter anderem als eine Art "Playground" um sich ein wenig mit GIT / GitHub usw. auseinanderzusetzen
+Das Ganze dient unter anderem als eine Art "Playground" um sich ein wenig mit GIT / GitHub usw. auseinanderzusetzen.
+
+How To Build
+============
+Windows:
+Prerequirements: Go is installed and working.
+Building: run makefile.bat
+
+Linux:
+Prerequirements: Go and Make are installed and working.
+Building: run make
