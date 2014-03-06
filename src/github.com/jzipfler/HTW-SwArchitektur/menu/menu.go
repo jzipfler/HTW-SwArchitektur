@@ -31,6 +31,9 @@ const (
 		"Geben Sie dazu bitte den Namen des Services an."
 	AUFRUFEN_SERVICE_VORGEHEN string = "Sie wollen einen Service ausführen." + ZEILENUMBRUCH +
 		"Geben Sie dazu bitte den Namen des Services an."
+	AUFRUFEN_SERVICE_PARAMETER_INFO string = "Nachdem Sie den Service gewählt haben," + ZEILENUMBRUCH +
+		"müssen Sie nun die erforderlichen Parameter" + ZEILENUMBRUCH +
+		"eingeben. Danach wird der Service ausgeführt."
 	menu_content string = "Wählen Sie aus den folgenden Einträgen:\n\n" +
 		ZEIGE_SERVICE_LISTE + "\tServiceliste anzeigen" + ZEILENUMBRUCH +
 		ZEIGE_SERVICE_INFOS + "\tServicebeschreibung anzeigen" + ZEILENUMBRUCH +
@@ -116,6 +119,8 @@ func zeigeServiceInformation() {
 // und verarbeitet alle Informationen zum starten des Services.
 func aufrufenService() {
 	var serviceName string
+	var serviceAusgabe string
+	var err error
 	fmt.Println(ZEILENUMBRUCH + AUFRUFEN_SERVICE_VORGEHEN)
 	fmt.Print(EINGABE_SERVICE_NAME)
 	fmt.Scan(&serviceName)
@@ -126,16 +131,32 @@ func aufrufenService() {
 	}
 	if serviceInformation.Info.Arguments[0].Type != "void" {
 		//informationenAusgeben("Service hat mehrere Parameter.\nDies wird noch nicht unterstützt.", true)
-		//anzahlParameter := len(serviceInformation.Info.Arguments)
-		//parameter := make([]string, anzahlParameter)
+		anzahlParameter := len(serviceInformation.Info.Arguments)
+		parameter := make([]string, anzahlParameter)
+		fmt.Println(ZEILENUMBRUCH)
+		fmt.Println(AUFRUFEN_SERVICE_PARAMETER_INFO)
+		fmt.Println(ZEILENUMBRUCH)
 		for i := 0; i < len(serviceInformation.Info.Arguments); i++ {
-			fmt.Println(serviceInformation.Info.Arguments[i].Description)
-			fmt.Println(serviceInformation.Info.Arguments[i].Type)
-			fmt.Println("")
+			fmt.Printf("Der %d te Parameter ist vom Typ:\t\t%s\n", (i + 1), serviceInformation.Info.Arguments[i].Type)
+			fmt.Println("Dazu gehört folgende Beschreibung:\t" + serviceInformation.Info.Arguments[i].Description)
+			fmt.Printf("Parameter %d eingeben: ", (i + 1))
+			fmt.Scan(&parameter[i])
+			fmt.Println(ZEILENUMBRUCH)
 		}
-		return
+		switch len(serviceInformation.Info.Arguments) {
+		case 1:
+			serviceAusgabe, err = service.CallService(serviceName, parameter[0])
+		case 2:
+			serviceAusgabe, err = service.CallService(serviceName, parameter[0], parameter[1])
+		case 3:
+			serviceAusgabe, err = service.CallService(serviceName, parameter[0], parameter[1], parameter[2])
+		default:
+			informationenAusgeben("Unbekannte Anzahl Parameter", true)
+			return
+		}
+	} else {
+		serviceAusgabe, err = service.CallService(serviceName)
 	}
-	serviceAusgabe, err := service.CallService(serviceName)
 	if err != nil {
 		informationenAusgeben(err.Error(), true)
 	}
