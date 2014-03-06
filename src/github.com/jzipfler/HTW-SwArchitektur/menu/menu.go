@@ -79,6 +79,7 @@ func zeigeServiceListe() {
 	serviceListe, err := service.GetServiceList()
 	if err != nil {
 		informationenAusgeben(err.Error(), true)
+		return
 	}
 	for key, serviceInfoAdresse := range *serviceListe {
 		buffer.WriteString(ZEILENUMBRUCH +
@@ -104,6 +105,7 @@ func zeigeServiceInformation() {
 	serviceInformation, err := service.GetServiceInfo(serviceName)
 	if err != nil {
 		informationenAusgeben(err.Error(), true)
+		return
 	}
 	informationenAusgeben(verarbeiteServiceInfoAddress(*serviceInformation), false)
 }
@@ -123,7 +125,14 @@ func aufrufenService() {
 		return
 	}
 	if serviceInformation.Info.Arguments[0].Type != "void" {
-		informationenAusgeben("Service hat mehrere Parameter.\nDies wird noch nicht unterstützt.", true)
+		//informationenAusgeben("Service hat mehrere Parameter.\nDies wird noch nicht unterstützt.", true)
+		//anzahlParameter := len(serviceInformation.Info.Arguments)
+		//parameter := make([]string, anzahlParameter)
+		for i := 0; i < len(serviceInformation.Info.Arguments); i++ {
+			fmt.Println(serviceInformation.Info.Arguments[i].Description)
+			fmt.Println(serviceInformation.Info.Arguments[i].Type)
+			fmt.Println("")
+		}
 		return
 	}
 	serviceAusgabe, err := service.CallService(serviceName)
