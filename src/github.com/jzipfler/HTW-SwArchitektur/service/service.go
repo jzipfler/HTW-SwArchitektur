@@ -127,8 +127,10 @@ func GetRegistryAddressFromInterface(intf net.Interface, ch chan *net.TCPAddr) {
 	if err != nil {
 		return
 	}
-
-	ch <- &net.TCPAddr{address.IP, response.Address.Port, address.Zone}
+	
+	if response.Address.Port != 0 {
+		ch <- &net.TCPAddr{address.IP, response.Address.Port, address.Zone}
+	}
 }
 
 // Returns the address of any registry which is currently active localhost.
@@ -162,7 +164,9 @@ func GetRegistryAddressFromLocalhost(ch chan *net.TCPAddr) {
 		return
 	}
 
-	ch <- &net.TCPAddr{address.IP, response.Address.Port, address.Zone}
+	if response.Address.Port != 0 {
+		ch <- &net.TCPAddr{address.IP, response.Address.Port, address.Zone}
+	}
 }
 
 // Returns the address of any registry which is currently active.
