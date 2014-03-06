@@ -97,13 +97,19 @@ var (
 	registryAddress *net.TCPAddr = nil
 )
 
-// Returns the address of any registry which is currently active on the given interface.
-func GetRegistryAddressFromInterface(intf net.Interface, ch chan *net.TCPAddr) {
+// Returns the address of any registry which is currently active on the given interface or localhost.
+func GetRegistryAddressFromInterface(intf net.Interface, localhost bool, ch chan *net.TCPAddr) {
 	request := LookupInfoRequest{OPERATION_ADDRESS, "registry"}
 	response := LookupAddressResponse{}
 	buffer := make([]byte, PACKET_SIZE)
-
-	connection, err := net.ListenMulticastUDP(UDP_PROTOCOL, &intf, MULTICAT_ADDR)
+	var connection *net.UDPConn
+	var err error
+	
+	if localhost {
+		connection, err = net.ListenUDP(UDP_PROTOCOL, UDP_ANY_ADDR)
+	} else {
+		connection, err = net.ListenMulticastUDP(UDP_PROTOCOL, &intf, MULTICAT_ADDR)
+	}
 	if err != nil {
 		return
 	}
@@ -113,7 +119,11 @@ func GetRegistryAddressFromInterface(intf net.Interface, ch chan *net.TCPAddr) {
 	if err != nil {
 		return
 	}
-	_, err = connection.WriteToUDP(bytes, MULTICAT_ADDR)
+	if localhost {
+		_, err = connection.WriteToUDP(bytes, MULTICAT_SELF_ADDR)
+	} else {
+		_, err = connection.WriteToUDP(bytes, MULTICAT_ADDR)
+	}
 	if err != nil {
 		return
 	}
@@ -128,42 +138,6 @@ func GetRegistryAddressFromInterface(intf net.Interface, ch chan *net.TCPAddr) {
 		return
 	}
 	
-	if response.Address.Port != 0 {
-		ch <- &net.TCPAddr{address.IP, response.Address.Port, address.Zone}
-	}
-}
-
-// Returns the address of any registry which is currently active localhost.
-func GetRegistryAddressFromLocalhost(ch chan *net.TCPAddr) {
-	request := LookupInfoRequest{OPERATION_ADDRESS, "registry"}
-	response := LookupAddressResponse{}
-	buffer := make([]byte, PACKET_SIZE)
-
-	connection, err := net.ListenUDP(UDP_PROTOCOL, UDP_ANY_ADDR)
-	if err != nil {
-		return
-	}
-	defer connection.Close()
-
-	bytes, err := json.Marshal(request)
-	if err != nil {
-		return
-	}
-	_, err = connection.WriteToUDP(bytes, MULTICAT_SELF_ADDR)
-	if err != nil {
-		return
-	}
-
-	connection.SetReadDeadline(time.Now().Add(time.Second))
-	length, address, err := connection.ReadFromUDP(buffer)
-	if err != nil {
-		return
-	}
-	err = json.Unmarshal(buffer[:length], &response)
-	if err != nil {
-		return
-	}
-
 	if response.Address.Port != 0 {
 		ch <- &net.TCPAddr{address.IP, response.Address.Port, address.Zone}
 	}
@@ -181,9 +155,9 @@ func GetRegistryAddress() (*net.TCPAddr, error) {
 		return nil, err
 	}
 	
-	go GetRegistryAddressFromLocalhost(ch)
+	go GetRegistryAddressFromInterface(net.Interface{}, true, ch)
 	for _, i := range intf {
-		go GetRegistryAddressFromInterface(i, ch)
+		go GetRegistryAddressFromInterface(i, false, ch)
 	}
 	
 	select {
