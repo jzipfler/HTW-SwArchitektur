@@ -1,5 +1,5 @@
-// signalHandler
-package signalHandler
+// signalhandler
+package signalhandler
 
 import (
 	"fmt"

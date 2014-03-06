@@ -1,2 +1,4 @@
 # ignore all files in the pkg directory
-!/pkg/.gitignore
+*.o
+*.a
+*.so

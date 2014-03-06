@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/jzipfler/HTW-SwArchitektur/service"
-	"github.com/jzipfler/HTW-SwArchitektur/signalHandler"
+	"github.com/jzipfler/HTW-SwArchitektur/signalhandler"
 	"os"
 	"strconv"
 )
@@ -45,7 +45,7 @@ const (
 func main() {
 	// Starte den SignalHandler als goroutine, die bei
 	// einem empfangenem Signal das Programm beendet.
-	go signalHandler.SignalHandler()
+	go signalhandler.SignalHandler()
 	menu()
 }
 
@@ -85,6 +85,7 @@ func zeigeServiceListe() {
 		return
 	}
 	for key, serviceInfoAdresse := range *serviceListe {
+		buffer.Reset()
 		buffer.WriteString(ZEILENUMBRUCH +
 			SERVICE_HEADER + ZEILENUMBRUCH + ZEILENUMBRUCH +
 			"\t   " + key + ZEILENUMBRUCH +
