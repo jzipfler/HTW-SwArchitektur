@@ -1,6 +1,6 @@
 CURDIR := "$(shell pwd)"
 
-all: service randomservice isprimeservice concatenateservice serviceuser registryserver signalHandler menu
+all: service randomservice isprimeservice concatenateservice serviceuser registryserver signalhandler menu
 
 service:
 	export GOPATH=${CURDIR}; \
@@ -26,9 +26,9 @@ registryserver:
 	export GOPATH=${CURDIR}; \
 	go install github.com/jzipfler/HTW-SwArchitektur/registryserver
 
-signalHandler:
+signalhandler:
 	export GOPATH=${CURDIR}; \
-	go build github.com/jzipfler/HTW-SwArchitektur/signalHandler
+	go build github.com/jzipfler/HTW-SwArchitektur/signalhandler
 
 menu:
 	export GOPATH=${CURDIR}; \
