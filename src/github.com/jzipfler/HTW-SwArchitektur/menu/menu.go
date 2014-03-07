@@ -1,4 +1,4 @@
-// menu
+﻿// menu
 package main
 
 import (
@@ -111,6 +111,10 @@ func zeigeServiceInformation() {
 		informationenAusgeben(err.Error(), true)
 		return
 	}
+	if serviceInformation.Address == "" {
+		informationenAusgeben("Der angegebene Service existiert nicht.", true)
+		return	
+	}
 	informationenAusgeben(verarbeiteServiceInfoAddress(*serviceInformation), false)
 }
 
@@ -129,6 +133,10 @@ func aufrufenService() {
 	if err != nil {
 		informationenAusgeben(err.Error(), true)
 		return
+	}
+	if serviceInformation.Address == "" {
+		informationenAusgeben("Der angegebene Service existiert nicht.", true)
+		return	
 	}
 	if serviceInformation.Info.Arguments[0].Type != "void" {
 		//informationenAusgeben("Service hat mehrere Parameter.\nDies wird noch nicht unterstützt.", true)
