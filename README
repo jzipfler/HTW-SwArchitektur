@@ -24,3 +24,17 @@ Building: run makefile.bat
 Linux:
 Prerequirements: Go and Make are installed and working.
 Building: run make
+
+How To View Documentation
+=========================
+1. Run: godoc -http=:6060
+2. Open "localhost:6060" in your favorite browser.
+3. The "doc"-directory contains additional documentation.
+
+How To Test/Run
+===============
+1. Launch registryserver
+2. Launch randomservice
+3. Launch isprimeservice
+4. Launch concatenateservice
+5. Launch menu or serviceuser
