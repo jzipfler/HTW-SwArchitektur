@@ -21,7 +21,7 @@ func createCompositeService(service1, service2, servicenew string) {
 	desc := service1 + "(" + service2 + "())."
 	serviceInfo := service.ServiceInfo{
 		servicenew,
-		"variable",
+		"string",
 		desc,
 		[]service.ArgumentInfo{
 			{"void", "void", "void"},

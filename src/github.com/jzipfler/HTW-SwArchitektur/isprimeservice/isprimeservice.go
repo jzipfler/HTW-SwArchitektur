@@ -9,7 +9,7 @@ import (
 
 var serviceIsPrime = service.ServiceInfo{
 	"isprime",
-	"bool",
+	"string",
 	"Performs 16 Miller-Rabin tests to check whether x is prime.",
 	[]service.ArgumentInfo{
 		{"x", "int", "number to test"},
