@@ -7,7 +7,7 @@ import (
 
 var serviceConcatenate = service.ServiceInfo{
 	"concatenate",
-	"variable",
+	"var",
 	"Concatenate tow services service1(service2()) as service.",
 	[]service.ArgumentInfo{
 		{"service1", "string", "first service name"},
@@ -18,10 +18,11 @@ var serviceConcatenate = service.ServiceInfo{
 
 // Create composite service service1(service2()) as servicenew
 func createCompositeService(service1, service2, servicenew string) {
+	desc := service1 + "(" + service2 + "())."
 	serviceInfo := service.ServiceInfo{
 		servicenew,
 		"variable",
-		"service1(service2()).",
+		desc,
 		[]service.ArgumentInfo{
 			{"void", "void", "void"},
 		},
