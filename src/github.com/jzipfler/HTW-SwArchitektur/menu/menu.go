@@ -1,4 +1,8 @@
-﻿// menu
+﻿// Dieses Paket enthät ein ausführbares Menü, dass zusammen
+// mit dem Paket "github.com/jzipfler/HTW-SwArchitektur/service"
+// zusammenarbeitet und ein Frontend dafür bereit stellt.
+// In diesem kann man sich eine Serviceliste von einer Registry
+// anzeigen lassen und die dort registrierten Services ausführen.
 package main
 
 import (
@@ -10,6 +14,10 @@ import (
 	"strconv"
 )
 
+// String-Konstanten, die für die Abarbeitung der einzelnen
+// Aufgaben verwendet werden.
+// Diese verhindern ein ständiges neuerstellen der String "Objekte"
+// innerhalb der einzelnen Methoden.
 const (
 	VERSION                string = "v"
 	quit_menu              string = "q"
@@ -42,6 +50,10 @@ const (
 		quit_menu + "\tProgramm beenden"
 )
 
+// Mit dieser Methode wird das Programm gestartet.
+// Dabei wird ein Signal Handler als go-Routine gestartet
+// der das "interrupt" Signal abfängt.
+// Danach wird das eigentliche Menü aufgerufen.
 func main() {
 	// Starte den SignalHandler als goroutine, die bei
 	// einem empfangenem Signal das Programm beendet.
@@ -50,7 +62,8 @@ func main() {
 }
 
 // Zeigt ein Menü an und verarbeitet die darauf folgende Eingabe.
-// Dabei verzweigt die Verarbeitung in andere Funktionen.
+// Dabei verzweigt die Verarbeitung in andere Funktionen,
+// die die jeweiligen Eingaben verarbeiten.
 func menu() {
 	for line := ""; line != quit_menu; {
 		fmt.Printf("%s\n%s\n%s\n", MENU_HEADER, menu_content, FOOTER)
